@@ -1,0 +1,10 @@
+{
+  "id": "./",
+  "name": "Shelf Life",
+  "short_name": "Shelf Life",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#E8F8F4",
+  "theme_color": "#145A32",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "shelf-life",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shelf Life cross-platform browser prototype",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "undici": "6.27.0"
+  }
+}
