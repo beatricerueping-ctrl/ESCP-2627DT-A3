@@ -3,18 +3,28 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import sys
+import tempfile
 import time
 import unittest
 from urllib.request import urlopen
 from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
-ORIGIN = 'http://127.0.0.1:8123'
+STATIC_SITE = os.environ.get('STATIC_SITE') == '1'
+ORIGIN = 'http://127.0.0.1:8123' + ('/ESCP-2627DT-A3/' if STATIC_SITE else '/')
 
 class CameraTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.server = subprocess.Popen(['node', 'server.js'], cwd=ROOT,
+        cls.static_directory = None
+        command = ['node', 'server.js']
+        if STATIC_SITE:
+            cls.static_directory = tempfile.TemporaryDirectory()
+            shutil.copytree(ROOT / 'public', Path(cls.static_directory.name) / 'ESCP-2627DT-A3')
+            command = [sys.executable, '-m', 'http.server', '8123', '--bind', '127.0.0.1', '--directory', cls.static_directory.name]
+        cls.server = subprocess.Popen(command, cwd=ROOT,
             env={**os.environ, 'PORT':'8123'}, stdout=subprocess.DEVNULL)
         for _ in range(50):
             try:
@@ -31,6 +41,7 @@ class CameraTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.browser.close(); cls.p.stop()
         cls.server.terminate(); cls.server.wait(timeout=10)
+        if cls.static_directory: cls.static_directory.cleanup()
 
     def setUp(self):
         self.context = self.browser.new_context(permissions=['camera'],

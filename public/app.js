@@ -344,6 +344,7 @@ VIEWS.login = (el, {role}) => {
     <div class="card pad stack anim-in" style="margin-top:20px;animation-delay:.16s;gap:8px">
       <div class="row between"><b style="font-size:14px;color:var(--forest)">Demo accounts</b><span class="demo-tag">Prototype</span></div>
       <p class="note">Tap an account to fill the form. These test accounts stand in for the production sign-in service.</p>
+      <p class="note">Your photos and records stay in this browser. They do not sync to other devices. Clearing browser data removes them.</p>
       ${demos.map(a => `<button class="opt" data-fill="${a.id}" style="font-size:13.5px"><span class="grow"><b>${esc(a.name)}</b> · ${a.role === "manager" ? "Store manager" : a.role === "employee" ? "Employee" : "Customer"}${a.storeId ? `<br><small class="note">${esc(storeById(a.storeId).name)}</small>` : ""}<br><small class="note tnum">${esc(a.email)} · ${esc(a.pw)}</small></span></button>`).join("")}
     </div>`;
   bindBack(el);
