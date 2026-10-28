@@ -710,8 +710,19 @@ function suggestDiscount(p){
     const pct = pctForDays(d), cond = p.condition === "fair" ? ", with visible imperfections confirmed by the employee" : p.condition === "good" ? ", with minor cosmetic imperfections confirmed by the employee" : "";
     return {pct, reason: `${d} day${d === 1 ? "" : "s"} before the recorded ${p.dateType === "useby" ? "use-by" : "best-before"} date${cond}.`, d};
   }
-  if (["fair","good"].includes(p.condition) && ["review","monitor"].includes(p.status)) return {pct: rules().noDatePct, reason: "No reliable expiry date. Store default for produce with visible imperfections, after employee inspection."};
+  if (["fair","good"].includes(p.condition) && p.status !== "manual") return {pct: rules().noDatePct, reason: "No reliable expiry date. Store default for produce with visible imperfections, after employee inspection."};
   return {pct: null, reason: "No reliable expiry date and no condition issue. Keep inspecting on schedule."};
+}
+
+function recommendationMarkup(p){
+  const recommendation = suggestDiscount(p);
+  const cents = Math.round(Number(p.price) * 100);
+  const price = Number.isFinite(cents) && cents > 0 && recommendation.pct
+    ? eur(Math.round(cents * (100 - recommendation.pct) / 100) / 100) : null;
+  return `<p class="eyebrow">Recommended discount</p>
+    <p style="font-size:24px;font-weight:800;color:var(--forest)">${recommendation.pct ? `${recommendation.pct}% off${price ? ` · ${price} / ${esc(p.unit || "unit")}` : ""}` : "No discount recommended"}</p>
+    <p class="sub">${esc(recommendation.reason)}</p>
+    ${recommendation.pct ? `<p class="note">${price ? `Original price: ${eur(p.price)}. ` : "Enter the original selling price to see the recommended price. "}Based on store rules and your inspection. ${p.live?.pct === recommendation.pct ? "Approved and visible to customers." : "Requires staff approval before customers see it."}</p>` : ""}`;
 }
 
 /* ---------- monitoring & notifications (runs whenever staff have the app open) ---------- */
@@ -777,7 +788,7 @@ function prodRow(p){
 }
 
 /* ---------- Employee dashboard ---------- */
-VIEWS.edash = (el, {saved} = {}) => {
+VIEWS.edash = (el, {saved, savedId} = {}) => {
   const acc = me(), s = myStore();
   el.innerHTML = `
     <header class="topbar">${miniLogo(44)}<div class="mid"></div>
@@ -785,7 +796,7 @@ VIEWS.edash = (el, {saved} = {}) => {
     <div class="anim-in" style="margin-top:10px"><h1 class="hello">Hello, ${esc(firstName(acc.name))}!</h1>
       <p class="sub">Employee Dashboard · <b style="color:var(--forest)">${esc(s.name)}</b></p>
       <span class="pill-status" style="margin-top:8px">${acc.role === "manager" ? "Store manager" : "Employee"} · approvals up to ${rules().maxPct[acc.role]}%</span></div>
-    ${saved ? `<div class="card pad stack" style="margin-top:14px"><p role="status"><b>${esc(saved)}</b> saved and now monitored.</p><button class="btn btn-primary" id="addAnother">${I.camera} Log another product</button></div>` : ""}
+    ${saved ? `<div class="card pad stack" style="margin-top:14px"><p role="status"><b>${esc(saved)}</b> saved and now monitored.</p><div id="savedRecommendation"></div><button class="btn btn-outline" id="reviewSaved">Review discount</button><button class="btn btn-primary" id="addAnother">${I.camera} Log another product</button></div>` : ""}
     <button class="scan-cta anim-in" id="scan" style="margin-top:18px;animation-delay:.08s"><span class="ci">${I.camera}</span><span><b>Scan a Product</b><span style="opacity:.85;font-size:13.5px">Photo → identify product → freshness survey</span></span></button>
     <div class="tiles anim-in" id="tiles" style="margin-top:14px;animation-delay:.14s"></div>
     <div class="clock anim-in" style="margin-top:14px;animation-delay:.2s">
@@ -800,12 +811,17 @@ VIEWS.edash = (el, {saved} = {}) => {
   const startProduct = () => { S.draft = null; S.aiBlob = null; lsSet("sl_draft", null); go("scan"); };
   $("#scan", el).onclick = startProduct;
   $("#addAnother", el)?.addEventListener("click", startProduct);
+  $("#reviewSaved", el)?.addEventListener("click", () => go("eproduct", {id: savedId}));
   $("#bell", el).onclick = () => go("notifs");
   $("#gear", el).onclick = staffSettings;
   $("#all", el).onclick = () => { S.invFilter = "all"; go("inventory"); };
   $("#check", el).onclick = () => runChecks({manual: true});
   $$("[data-adv]", el).forEach(b => b.onclick = async () => { const n = +b.dataset.adv; await DB.set("settings", "clock", {offset: n === 0 ? 0 : clockOffset() + n, at: Date.now()}); toast(n ? `Demo clock moved to ${fmtDate(today())}` : "Demo clock reset to today"); runChecks(); });
   function paint(){
+    if (savedId && $("#savedRecommendation", el)) {
+      const savedProduct = DB.get("products", savedId);
+      $("#savedRecommendation", el).innerHTML = savedProduct ? recommendationMarkup(savedProduct) : "";
+    }
     const ps = myProducts(), t = today();
     const soon = ps.filter(p => ["review","immediate","manual"].includes(p.status) || (p.date && diffDays(t, p.date) <= rules().reviewWindow && p.status !== "hold"));
     const tiles = [["all","Products Monitored", ps.length,""],["soon","Expiring Soon", soon.length,"t2"],["pending","Pending Discounts", ps.filter(p => p.discount?.state === "pending").length,"t3"],["active","Active Discounts", ps.filter(p => p.live).length,"t4"]];
@@ -1013,7 +1029,7 @@ VIEWS.assess = el => {
   const st = STATUS[ev.status];
   const bg = {good:"var(--pastel)", monitor:"#EAF4D4", review:"var(--warm-bg)", immediate:"#FBE3CF", hold:"var(--hold-bg)", manual:"#E9EEF0"}[ev.status];
   const preview = suggestDiscount({status: ev.status, dateType: A.q5.type, date: A.q5.date, condition: A.q2});
-  const discountTxt = ["hold","immediate"].includes(ev.status) ? "Not eligible until inspected and cleared." : ev.status === "review" && preview.pct ? `${preview.pct}% suggested (needs your approval after saving)` : "No immediate discount required.";
+  const discountTxt = preview.pct ? `${preview.pct}% suggested (needs your approval after saving)` : preview.reason;
   const units = ["kg","each","pack","500 g","1 L","box"];
   el.innerHTML = `${topbar(backBtn("Back to survey"), `<b style="color:var(--forest)">Product Assessment</b>`)}
     <div class="statusbig anim-in" style="background:${bg};margin-top:8px"><p class="eyebrow">Freshness status</p><div class="row" style="gap:10px"><span class="st ${st.cls}" style="font-size:13px;padding:6px 12px">${st.label}</span></div>
@@ -1024,7 +1040,7 @@ VIEWS.assess = el => {
       <dt>Employee assessment</dt><dd>${esc(qLabel("q2", A.q2))}</dd><dt>Texture</dt><dd>${esc(qLabel("q3", A.q3))}</dd><dt>Smell / spoilage</dt><dd>${esc(qLabel("q4", A.q4))}</dd>
       <dt>Date</dt><dd>${esc(qLabel("q5", A.q5.type))}${A.q5.date ? ` · ${fmtDate(A.q5.date)}` : ""}</dd>
       <dt>Storage</dt><dd>${esc(qLabel("q6", A.q6.storage))}${A.q6.temp != null ? ` · ${A.q6.temp} °C` : ""}${A.q6.excursion ? " · excursion reported" : ""}</dd>
-      <dt>Discount</dt><dd>${discountTxt}</dd></dl></div>
+      <dt>Discount</dt><dd id="assessmentDiscount">${discountTxt}</dd></dl></div>
     <details class="card pad anim-in" style="margin-top:10px;animation-delay:.1s" open><summary style="font-weight:700;color:var(--forest);cursor:pointer">Why this status</summary><ul class="why" style="margin-top:8px">${ev.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
       <p class="note" style="margin-top:8px">Statuses come from the store's configurable rules, not from AI certainty.</p></details>
     <div class="section-h"><h2>Confirm product record</h2></div>
@@ -1037,9 +1053,20 @@ VIEWS.assess = el => {
       <label class="fld" for="rd">${A.q5.type === "none" ? "Relevant date (none recorded)" : esc(qLabel("q5", A.q5.type))}<input class="inp" id="rd" type="date" value="${esc(A.q5.date || "")}" ${A.q5.type === "none" ? "disabled" : ""}></label>
       <label class="fld">Storage conditions<input class="inp" value="${esc(qLabel("q6", A.q6.storage))}" disabled></label>
       <label class="fld" for="rn2">Next inspection date<input class="inp" id="rn2" type="date" value="${ev.next}" min="${today()}"></label>
+      <div class="proposal" id="discountPreview" aria-live="polite"></div>
       <p class="err" id="err" role="alert"></p>
       <button class="btn btn-primary" type="submit" id="sv">${I.check} Save &amp; Monitor Product</button></form>`;
   bindBack(el);
+  function updateRecommendation(){
+    const date = $("#rd", el).value || null;
+    const evaluation = evaluate({condition: A.q2, texture: A.q3, smell: A.q4, dateType: A.q5.type, date, storage: A.q6.storage, excursion: A.q6.excursion, aiMold: !!ai?.possible_mold});
+    const product = {status: evaluation.status, dateType: A.q5.type, date, condition: A.q2, price: $("#rp", el).value, unit: $("#ru", el).value};
+    const recommendation = suggestDiscount(product);
+    $("#assessmentDiscount", el).textContent = recommendation.pct ? `${recommendation.pct}% suggested (needs your approval after saving)` : recommendation.reason;
+    $("#discountPreview", el).innerHTML = recommendationMarkup(product);
+  }
+  for (const field of ["rp", "rd", "ru"]) $("#" + field, el).addEventListener("input", updateRecommendation);
+  updateRecommendation();
   $("#rec", el).onsubmit = async e => {
     e.preventDefault(); const err = $("#err", el);
     const name = $("#rn", el).value.trim(), qty = +$("#rq", el).value, price = +$("#rp", el).value, date = $("#rd", el).value || null, next = $("#rn2", el).value || ev.next;
@@ -1056,11 +1083,15 @@ VIEWS.assess = el => {
       status: final.status, statusReason: final.reasons[0], priority: final.priority, nextReview: next,
       inspections: [{at: Date.now(), date: today(), by: acc.id, byName: acc.name, condition: A.q2, status: final.status, note: "Initial scan and freshness survey"}],
       discount: {state: "none"}, createdAt: Date.now(), createdBy: acc.id, updatedAt: Date.now(), removed: false};
+    const recommendation = suggestDiscount(doc);
+    if (recommendation.pct && (recommendation.d == null || recommendation.d <= rules().reviewWindow)) {
+      doc.discount = {state: "pending", pct: recommendation.pct, suggestedPct: recommendation.pct, reason: recommendation.reason, at: Date.now(), atDate: today()};
+    }
     $("#sv", el).disabled = true;
     try { await DB.set("products", id, doc); } catch { $("#sv", el).disabled = false; return; }
     S.draft = null; S.aiBlob = null; lsSet("sl_draft", null);
     toast(`${name} saved and now monitored`);
-    go("edash", {saved: name}, {reset: true, anim: "up"});
+    go("edash", {saved: name, savedId: id}, {reset: true, anim: "up"});
     setTimeout(() => runChecks(), 600);
   };
 };
@@ -1092,7 +1123,7 @@ VIEWS.eproduct = (el, {id}) => {
           <p class="note">Approved by ${esc(p.live.byName || "staff")} on ${fmtWhen(p.live.approvedAt)}. Customers see it on the ${esc(s.name)} page.</p>
           <button class="btn btn-ghost btn-sm" id="withdraw">Withdraw discount</button></div>` : ""}
       ${!active || pend || (sug.pct && sug.pct > p.live.pct) ? `<div class="proposal" style="margin-top:12px">
-          <p class="eyebrow">${pend ? "AI Suggested Discount — Pending Employee Approval" : "Suggested discount"}</p>
+          <p class="eyebrow">${pend ? "Recommended Discount — Pending Employee Approval" : "Recommended discount"}</p>
           ${blocked ? `<div class="flag hold">${I.alert}<span>${esc(sug.reason)} Discounted sale is blocked.</span></div>` :
             pct ? `<div class="row" style="gap:12px;align-items:baseline"><span class="big tnum">${pct}%</span><span class="tnum">New price <b>${eur(p.price * (1 - pct/100))}</b> <s class="note">${eur(p.price)}</s></span></div>
               <p style="font-size:13.5px"><b>Reason:</b> ${esc(pend ? p.discount.reason : sug.reason)}</p>

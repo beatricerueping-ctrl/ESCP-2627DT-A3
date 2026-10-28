@@ -38,6 +38,10 @@ Browsers that support it can use their Install / Add to Dock / Create shortcut m
 4. Review the picture, choose **Retake** if necessary, then **Use photo** to identify the product manually.
 5. Continue to the freshness survey and **Save & Monitor Product**.
 
+The assessment form shows the recommended discount, price and reason as you enter the selling price or edit the recorded date. With no expiry date, the current demo rules suggest 20% for staff-confirmed minor cosmetic imperfections or visible bruising. A product without a condition issue can show “No discount recommended”; products on hold or needing immediate inspection cannot be approved for sale. These are configurable demo rules, not AI judgments.
+
+After saving, the dashboard keeps the recommendation visible. Choose **Review discount** to approve, adjust or reject it, or **Log another product** to continue capturing goods. A suggestion is not a live customer offer until approved.
+
 The camera stops after capture, on navigation, when the tab is hidden, and when the page closes. Enable it again after returning from another tab. Photos are resized before being attached to a product. Uploading JPEG, PNG or WebP is an alternative; HEIC support depends on the browser. Files over 25 MB are rejected.
 
 Camera access requires **localhost or HTTPS**. On a phone accessing a remotely hosted app, use HTTPS. An HTTP LAN address such as a computer's local IP will not enable live camera capture. If access is denied, allow the browser in macOS System Settings → Privacy & Security → Camera, or Windows Settings → Privacy & security → Camera, and check the site's camera permission. If the camera is busy, close other camera apps. No microphone is requested.
