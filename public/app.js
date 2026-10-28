@@ -777,7 +777,7 @@ function prodRow(p){
 }
 
 /* ---------- Employee dashboard ---------- */
-VIEWS.edash = el => {
+VIEWS.edash = (el, {saved} = {}) => {
   const acc = me(), s = myStore();
   el.innerHTML = `
     <header class="topbar">${miniLogo(44)}<div class="mid"></div>
@@ -785,7 +785,8 @@ VIEWS.edash = el => {
     <div class="anim-in" style="margin-top:10px"><h1 class="hello">Hello, ${esc(firstName(acc.name))}!</h1>
       <p class="sub">Employee Dashboard · <b style="color:var(--forest)">${esc(s.name)}</b></p>
       <span class="pill-status" style="margin-top:8px">${acc.role === "manager" ? "Store manager" : "Employee"} · approvals up to ${rules().maxPct[acc.role]}%</span></div>
-    <button class="scan-cta anim-in" id="scan" style="margin-top:18px;animation-delay:.08s"><span class="ci">${I.camera}</span><span><b>Scan a Product</b><span style="opacity:.85;font-size:13.5px">Photo → AI check → freshness survey</span></span></button>
+    ${saved ? `<div class="card pad stack" style="margin-top:14px"><p role="status"><b>${esc(saved)}</b> saved and now monitored.</p><button class="btn btn-primary" id="addAnother">${I.camera} Log another product</button></div>` : ""}
+    <button class="scan-cta anim-in" id="scan" style="margin-top:18px;animation-delay:.08s"><span class="ci">${I.camera}</span><span><b>Scan a Product</b><span style="opacity:.85;font-size:13.5px">Photo → identify product → freshness survey</span></span></button>
     <div class="tiles anim-in" id="tiles" style="margin-top:14px;animation-delay:.14s"></div>
     <div class="clock anim-in" style="margin-top:14px;animation-delay:.2s">
       <div class="row between"><b style="font-size:13.5px;color:#6B4E0E">Demo clock · test mode</b><span class="tnum" id="clk" style="font-size:13px;font-weight:700;color:#6B4E0E"></span></div>
@@ -796,7 +797,9 @@ VIEWS.edash = el => {
     <div id="push" style="margin-top:10px"></div>
     <div class="section-h"><h2>Recently scanned</h2><button class="link" id="all" style="font-size:13.5px">All products</button></div>
     <div class="stack" id="recent"></div>`;
-  $("#scan", el).onclick = () => { S.draft = null; lsSet("sl_draft", null); go("scan"); };
+  const startProduct = () => { S.draft = null; S.aiBlob = null; lsSet("sl_draft", null); go("scan"); };
+  $("#scan", el).onclick = startProduct;
+  $("#addAnother", el)?.addEventListener("click", startProduct);
   $("#bell", el).onclick = () => go("notifs");
   $("#gear", el).onclick = staffSettings;
   $("#all", el).onclick = () => { S.invFilter = "all"; go("inventory"); };
@@ -1057,7 +1060,8 @@ VIEWS.assess = el => {
     try { await DB.set("products", id, doc); } catch { $("#sv", el).disabled = false; return; }
     S.draft = null; S.aiBlob = null; lsSet("sl_draft", null);
     toast(`${name} saved and now monitored`);
-    backTo("edash"); setTimeout(() => runChecks(), 600);
+    go("edash", {saved: name}, {reset: true, anim: "up"});
+    setTimeout(() => runChecks(), 600);
   };
 };
 

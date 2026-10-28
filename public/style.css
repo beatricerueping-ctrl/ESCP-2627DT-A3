@@ -63,7 +63,7 @@ p{margin:0}
 .welcome .mono.show{opacity:1;transform:none}
 .welcome .choices{position:absolute;left:0;right:0;bottom:0;padding:0 max(24px,env(safe-area-inset-left,0px)) calc(28px + env(safe-area-inset-bottom,0px));display:grid;gap:16px}
 .welcome .tagline{text-align:center;color:var(--muted);font-size:14.5px;max-width:30ch;margin:0 auto 8px;opacity:0;transform:translateY(14px);transition:all .7s ease}
-.choices .btn{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .8s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s}
+.choices .btn{width:100%;max-width:280px;justify-self:center;min-height:46px;border-radius:14px;font-size:14px;padding:0 16px;opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .8s cubic-bezier(.2,.8,.2,1),box-shadow .2s,background .2s}
 .choices.in .tagline{opacity:1;transform:none}
 .choices.in .btn{opacity:1;transform:none}
 .choices.in .btn.b2{transition-delay:.22s}
@@ -72,6 +72,7 @@ p{margin:0}
 /* ---------- buttons, inputs ---------- */
 .btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:18px;border:1.5px solid transparent;font-weight:700;font-size:16px;letter-spacing:.01em;padding:0 22px;transition:transform .15s ease,box-shadow .2s,background .2s,opacity .2s}
 .btn:active{transform:scale(.975)}
+.btn svg{width:22px;height:22px;flex:none}
 .btn-primary{background:var(--emerald);color:var(--white);box-shadow:0 8px 20px rgba(0,143,101,.28)}
 .btn-primary:hover{background:#007f59}
 .btn-outline{background:rgba(215,244,223,.55);color:var(--forest);border-color:var(--emerald)}
