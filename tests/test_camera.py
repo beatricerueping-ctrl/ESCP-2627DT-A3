@@ -172,4 +172,31 @@ class CameraTests(unittest.TestCase):
         self.page.locator('#reviewSaved').click()
         expect(self.page.locator('#approve')).to_have_count(0)
 
+    def test_customer_codes_only_in_details_stable_and_location_specific(self):
+        self.page.goto(ORIGIN)
+        self.page.locator('#toCust').click()
+        self.page.locator('#em').fill('alex@shelflife.demo')
+        self.page.locator('#pw').fill('ShelfLife-demo1')
+        self.page.locator('#go').click()
+        expect(self.page.locator('#mlist')).to_be_visible()
+        self.page.evaluate('''async () => {
+            for (const [id, storeId] of [['test-one','edeka-friedrichstrasse'],['test-two','rewe-hauptbahnhof']])
+                await DB.set('offers', id, {productId:id,storeId,name:'Test Apples',category:'Fruits',unit:'kg',price:3,pct:20,newPrice:2.4,dateType:'none',date:null,qty:5,active:true});
+        }''')
+        self.page.locator('#mlist [data-id="edeka-friedrichstrasse"]').click()
+        expect(self.page.locator('.discount-code')).to_have_count(0)
+        self.page.locator('[data-id="test-one"]').click()
+        expect(self.page.locator('.discount-code')).to_have_text(__import__('re').compile(r'^\d{4}$'))
+        first = self.page.locator('.discount-code').inner_text()
+        expect(self.page.locator('.discount-ticket')).to_contain_text('EDEKA Bahnhof Friedrichstraße')
+        self.page.reload()
+        self.page.locator('#mlist [data-id="edeka-friedrichstrasse"]').click()
+        self.page.locator('[data-id="test-one"]').click()
+        expect(self.page.locator('.discount-code')).to_have_text(first)
+        self.page.reload()
+        self.page.locator('#mlist [data-id="rewe-hauptbahnhof"]').click()
+        self.page.locator('[data-id="test-two"]').click()
+        expect(self.page.locator('.discount-code')).not_to_have_text(first)
+        expect(self.page.locator('.discount-ticket')).to_contain_text('REWE Berlin Hauptbahnhof')
+
 if __name__ == '__main__': unittest.main(verbosity=2)

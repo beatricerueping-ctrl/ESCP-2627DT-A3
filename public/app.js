@@ -482,7 +482,7 @@ function demoCatalog(storeId){
   const items = DEMO_ITEMS.filter(() => r() > .25);
   return items.map((it, i) => {
     const days = 1 + Math.floor(r() * 16), pct = pctForDays(days) || 0;
-    return {id: `demo-${i}`, demo: true, name: it.n, category: it.c, unit: it.u, price: it.p, pct, newPrice: +(it.p * (1 - pct/100)).toFixed(2), date: addDays(t, days), dateType: "bestbefore", tint: it.t, desc: it.d, stock: 3 + Math.floor(r() * 18)};
+    return {id: `demo-${DEMO_ITEMS.indexOf(it)}`, demo: true, name: it.n, category: it.c, unit: it.u, price: it.p, pct, newPrice: +(it.p * (1 - pct/100)).toFixed(2), date: addDays(t, days), dateType: "bestbefore", tint: it.t, desc: it.d, stock: 3 + Math.floor(r() * 18)};
   });
 }
 function storeOffers(storeId){
@@ -537,7 +537,11 @@ VIEWS.store = (el, {id}) => {
   return {refresh(c){ if (["offers","customers","settings","*"].includes(c)) paint(); }};
 };
 function productSheet(p, s){
+  if (me()?.role !== "customer") return;
   const d = daysLeft(p.date);
+  const currentOffer = p.approved ? DB.get("offers", p.id) : null;
+  const eligible = p.pct > 0 && (d == null || d >= 0) && (p.stock ?? p.qty ?? 1) > 0 && (!p.approved || (currentOffer?.active && currentOffer.storeId === s.id));
+  const code = eligible ? customerDiscountCode(p, s) : null;
   sheet(`<div class="pimg" style="border-radius:20px;background:${p.photo ? "#0E2A1B" : (p.tint || "var(--pastel)")};aspect-ratio:16/9">${p.photo ? `<img src="${p.photo}" alt="Photo of ${esc(p.name)}">` : glyph(p.category)}${p.pct ? `<span class="dbadge ${discLevel(p.pct)}">${p.pct}% OFF</span>` : ""}</div>
     <div class="stack" style="margin-top:14px;gap:6px">
       <div class="row between"><span class="eyebrow">${esc(p.category)}</span>${p.approved ? '<span class="ok-tag">Store-approved</span>' : '<span class="demo-tag">Demo data</span>'}</div>
@@ -549,8 +553,22 @@ function productSheet(p, s){
         <dt>Availability</dt><dd>${p.stock ? `${p.stock} in stock (sample)` : p.qty ? `${p.qty} ${esc(p.qtyUnit || "")} reduced` : "Ask in store"}</dd>
         <dt>About</dt><dd>${esc(p.desc || (p.approved ? "Checked by store staff and reduced to help avoid food waste." : ""))}</dd>
       </dl>
+      ${code ? `<div class="discount-ticket"><p class="eyebrow">Item discount code</p><strong class="discount-code tnum" aria-label="Discount code ${code.split("").join(" ")}">${code}</strong><p><b>${esc(p.name)}</b><br>${esc(s.name)}<br>${esc(s.addr)}</p><p class="note">For this item at this location only, while the offer is active and stock lasts.</p><p class="note">Prototype code — checkout redemption is not connected. Store acceptance is not guaranteed.</p></div>` : ""}
+      ${eligible && !code ? '<p class="note">Discount code unavailable. Browser storage may be unavailable or all four-digit codes are assigned.</p>' : ""}
       ${p.approved ? "" : `<p class="note" style="margin-top:8px">Sample product for the prototype. Discount follows the illustrative schedule; it is not a real promotion.</p>`}
     </div>`);
+}
+
+function customerDiscountCode(p, s){
+  const key = JSON.stringify([p.demo ? "sample" : "offer", s.id, p.demo ? p.id : (p.productId || p.id)]);
+  // Reserve every sample item/location in a fixed order, independent of daily sorting.
+  const keys = STORES.flatMap(store => DEMO_ITEMS.map((_, index) => JSON.stringify(["sample", store.id, `demo-${index}`])));
+  keys.push(...DB.list("offers").map(offer => JSON.stringify(["offer", offer.storeId, offer.productId || offer.id])).sort(), key);
+  try {
+    const assignments = ShelfLifeDiscountCodes.assignCodes(keys, lsGet("sl_discount_codes") || {});
+    lsSet("sl_discount_codes", assignments);
+    return lsGet("sl_discount_codes")?.[key] || null;
+  } catch { return null; }
 }
 
 /* ---------- 5. Customer profile & loyalty ---------- */

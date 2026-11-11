@@ -42,6 +42,12 @@ The assessment form shows the recommended discount, price and reason as you ente
 
 After saving, the dashboard keeps the recommendation visible. Choose **Review discount** to approve, adjust or reject it, or **Log another product** to continue capturing goods. A suggestion is not a live customer offer until approved.
 
+## Customer discount codes
+
+Opening a discounted product as a customer shows a four-digit item code with its store name/address. Codes are absent from product grids and employee screens. Each sample item/store or approved batch/store pair keeps the same code across reopening and refreshes; distinct pairs use distinct codes within the browser's saved registry. Leading zeros are significant. No code is shown for a non-discounted, expired or sold-out product.
+
+These are prototype reference codes, not integrated checkout coupons. Stores cannot automatically redeem or validate them yet. A real redemption service and retailer agreement are needed before promising an in-store discount. The static app has no shared code registry between devices for staff-created offers; clearing site data loses those assignments. The four-digit namespace supports at most 10,000 assigned pairs; when full the app reports code unavailability instead of duplicating a code.
+
 The camera stops after capture, on navigation, when the tab is hidden, and when the page closes. Enable it again after returning from another tab. Photos are resized before being attached to a product. Uploading JPEG, PNG or WebP is an alternative; HEIC support depends on the browser. Files over 25 MB are rejected.
 
 Camera access requires **localhost or HTTPS**. On a phone accessing a remotely hosted app, use HTTPS. An HTTP LAN address such as a computer's local IP will not enable live camera capture. If access is denied, allow the browser in macOS System Settings → Privacy & Security → Camera, or Windows Settings → Privacy & security → Camera, and check the site's camera permission. If the camera is busy, close other camera apps. No microphone is requested.
