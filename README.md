@@ -48,6 +48,14 @@ Opening a discounted product as a customer shows a four-digit item code with its
 
 These are prototype reference codes, not integrated checkout coupons. Stores cannot automatically redeem or validate them yet. A real redemption service and retailer agreement are needed before promising an in-store discount. The static app has no shared code registry between devices for staff-created offers; clearing site data loses those assignments. The four-digit namespace supports at most 10,000 assigned pairs; when full the app reports code unavailability instead of duplicating a code.
 
+## Privacy & Data
+
+Customer profile settings and staff settings both include Privacy & Data. The window shows browser permission status without requesting camera or location access; it explains how to change permissions in the browser. Nearby-store location, AI photo analysis, remembering a store, customer alert delivery and automatic retention remain visible as planned features. AI photo analysis will send product photos to OpenAI once connected; the current public capture workflow still uses manual assessment. Disabled planned controls do not enable uploads or location collection.
+
+Available controls include a role-scoped JSON download, customer preference reset, survey deletion while keeping earned points, saved-profile deletion, draft discard, and staff product-photo removal. Photo removal also removes the photo from the corresponding customer offer while preserving its record. Deletions require confirmation. In browser-only storage mode, clearing all Shelf Life data removes all `sl_` storage keys and signs out; it affects every demo account sharing that browser. It does not clear unrelated applications, revoke browser permissions or erase external copies. Profile deletion returns the public demo identity to its example defaults, not a real account deletion.
+
+The window also describes data categories, retention until deletion, shared-device limitations, GitHub Pages/Google Fonts/Cloudflare connections, and the need to supply provider retention terms and a privacy contact before a production launch.
+
 The camera stops after capture, on navigation, when the tab is hidden, and when the page closes. Enable it again after returning from another tab. Photos are resized before being attached to a product. Uploading JPEG, PNG or WebP is an alternative; HEIC support depends on the browser. Files over 25 MB are rejected.
 
 Camera access requires **localhost or HTTPS**. On a phone accessing a remotely hosted app, use HTTPS. An HTTP LAN address such as a computer's local IP will not enable live camera capture. If access is denied, allow the browser in macOS System Settings → Privacy & Security → Camera, or Windows Settings → Privacy & security → Camera, and check the site's camera permission. If the camera is busy, close other camera apps. No microphone is requested.

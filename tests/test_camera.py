@@ -199,4 +199,87 @@ class CameraTests(unittest.TestCase):
         expect(self.page.locator('.discount-code')).not_to_have_text(first)
         expect(self.page.locator('.discount-ticket')).to_contain_text('REWE Berlin Hauptbahnhof')
 
+    def open_customer_privacy(self):
+        self.page.goto(ORIGIN)
+        self.page.locator('#toCust').click()
+        self.page.locator('#em').fill('alex@shelflife.demo')
+        self.page.locator('#pw').fill('ShelfLife-demo1')
+        self.page.locator('#go').click()
+        self.page.locator('#prof').click()
+        self.page.locator('#gear').click()
+        self.page.locator('[data-a="priv"]').click()
+        expect(self.page.locator('#privacyClose')).to_be_visible()
+
+    def test_privacy_permissions_planned_features_export_and_survey_deletion(self):
+        self.page.add_init_script('''window.permissionRequests = 0;
+            navigator.mediaDevices.getUserMedia = () => {window.permissionRequests++; throw Error('Unexpected camera request');};
+            navigator.geolocation.getCurrentPosition = () => {window.permissionRequests++;};''')
+        self.open_customer_privacy()
+        expect(self.page.get_by_text('Product photos will be sent to OpenAI', exact=False)).to_be_visible()
+        expect(self.page.get_by_role('checkbox', name='Analyze product photos with AI', exact=False)).to_be_disabled()
+        expect(self.page.get_by_role('checkbox', name='Use my location', exact=False)).to_be_disabled()
+        expect(self.page.locator('#cameraPermission')).to_contain_text('Allowed by browser')
+        self.assertEqual(self.page.evaluate('window.permissionRequests'), 0)
+        self.page.evaluate('''async () => {
+            await DB.set('customers','cust-alex',{name:'Private Alex',prefs:['Bakery'],points:1350,surveys:{s1:{answer:'Yes'}}});
+            await DB.set('customers','cust-mira',{name:'Other private profile',surveys:{secret:'Other answer'}});
+            localStorage.setItem('unrelated_application', 'keep');
+        }''')
+        with self.page.expect_download() as download_info:
+            self.page.locator('#privacyExport').click()
+        exported = json.loads(Path(download_info.value.path()).read_text())
+        self.assertEqual(exported['profile']['name'], 'Private Alex')
+        self.assertNotIn('Other private profile', json.dumps(exported))
+        self.assertNotIn('pw', exported['account'])
+        self.page.locator('#privacySurveys').click()
+        self.page.locator('#privacyConfirmNo').click()
+        self.assertTrue(self.page.evaluate('!!DB.get("customers","cust-alex").surveys.s1'))
+        self.page.locator('#privacySurveys').click()
+        self.page.locator('#privacyConfirmYes').click()
+        expect(self.page.locator('#privacyMessage')).to_contain_text('Survey answers deleted')
+        self.assertEqual(self.page.evaluate('DB.get("customers","cust-alex").surveys'), {})
+        self.assertEqual(self.page.evaluate('DB.get("customers","cust-alex").points'), 1350)
+        self.assertTrue(self.page.evaluate('!!DB.get("customers","cust-mira").surveys.secret'))
+        self.page.locator('#privacyResetPrefs').click()
+        self.page.locator('#privacyConfirmYes').click()
+        expect(self.page.locator('#privacyMessage')).to_contain_text('Food preferences reset')
+        self.assertEqual(self.page.evaluate('DB.get("customers","cust-alex").prefs'), ['Fruits','Vegetables','Dairy'])
+        self.page.locator('#privacyProfile').click()
+        self.page.locator('#privacyConfirmYes').click()
+        expect(self.page.locator('#privacyMessage')).to_contain_text('Saved profile deleted')
+        self.assertTrue(self.page.evaluate('!DB.get("customers","cust-alex")'))
+        self.assertTrue(self.page.evaluate('!!DB.get("customers","cust-mira")'))
+        self.page.locator('#privacyClear').click()
+        self.page.locator('#privacyConfirmNo').click()
+        self.assertIsNotNone(self.page.evaluate('localStorage.getItem("sl_local")'))
+        self.page.locator('#privacyClear').click()
+        self.page.locator('#privacyConfirmYes').click()
+        expect(self.page.locator('#toCust')).to_be_visible()
+        self.assertEqual(self.page.evaluate('Object.keys(localStorage).filter(key => key.startsWith("sl_"))'), [])
+        self.assertEqual(self.page.evaluate('localStorage.getItem("unrelated_application")'), 'keep')
+
+    def test_staff_privacy_photo_removal_preserves_product_and_offer(self):
+        self.login()
+        self.page.locator('[data-view="scan"] [data-back]').click()
+        self.page.evaluate('''async () => {
+            const product = {name:'Apples',storeId:'edeka-friedrichstrasse',photo:'data:image/png;base64,iVBORw0KGgo=',qty:5};
+            await DB.set('products','privacy-photo',product);
+            await DB.set('offers','privacy-photo',{...product,active:true,pct:20});
+            localStorage.setItem('sl_draft',JSON.stringify({photo:'draft-photo'}));
+            S.draft = {photo:'draft-photo'};
+        }''')
+        self.page.locator('#gear').click()
+        self.page.locator('#staffPrivacy').click()
+        expect(self.page.locator('#privacyRemovePhoto')).to_be_visible()
+        self.page.locator('#privacyRemovePhoto').click()
+        self.page.locator('#privacyConfirmYes').click()
+        expect(self.page.locator('#privacyMessage')).to_contain_text('Photo removed')
+        self.assertIsNone(self.page.evaluate('DB.get("products","privacy-photo").photo'))
+        self.assertIsNone(self.page.evaluate('DB.get("offers","privacy-photo").photo'))
+        self.assertEqual(self.page.evaluate('DB.get("products","privacy-photo").qty'), 5)
+        self.page.locator('#privacyDraft').click()
+        self.page.locator('#privacyConfirmYes').click()
+        expect(self.page.locator('#privacyMessage')).to_contain_text('draft discarded')
+        self.assertIsNone(self.page.evaluate('localStorage.getItem("sl_draft")'))
+
 if __name__ == '__main__': unittest.main(verbosity=2)

@@ -659,12 +659,7 @@ function customerSettings(){
             <p class="note">Saved to your account. Delivery of customer alerts arrives with the mobile release.</p></div>`, s2 => {
               $$("[data-n]", s2).forEach(b => b.onclick = async () => { const cur = customerDoc().notify || {}; const v = !cur[b.dataset.n]; b.classList.toggle("on", v); await saveCustomer({notify: {[b.dataset.n]: v}}); });
             }); }
-          if (a === "priv") sheet(`<h2 style="font-size:20px;color:var(--forest)">Privacy &amp; Data</h2>
-            <p class="sub" style="margin:10px 0">Shelf Life stores your display name, food preferences, loyalty points and survey answers with your account. Store staff never see your survey answers, and you never see store-internal inspection data.</p>
-            <p class="note">${DB.mode === "db" ? "This prototype keeps data in the page's shared database, which everyone with access to this prototype can read." : "This prototype is keeping data only in this browser."}</p>
-            <button class="btn btn-warn" id="clr" style="width:100%;margin-top:14px">Delete my survey answers</button>`, (s2, c2) => {
-              $("#clr", s2).onclick = async () => { const c = clone(customerDoc()); c.surveys = {}; await DB.set("customers", acc.id, c); c2(); toast("Survey answers deleted. Points already earned are kept."); };
-            });
+          if (a === "priv") openPrivacy();
         }, 260);
       });
     });
@@ -869,9 +864,11 @@ function staffSettings(){
       <dl class="kv" style="margin-top:10px">${r.table.map((x, i) => `<dt>${i === 0 ? `${x.min}+ days` : x.min === r.table[i-1].min - 1 ? `${x.min} day${x.min > 1 ? "s" : ""}` : `${x.min}–${r.table[i-1].min - 1} days`}</dt><dd class="tnum">${x.pct}%</dd>`).join("")}
       <dt>Review window</dt><dd>${r.reviewWindow} days before the date</dd><dt>No-date default</dt><dd>${r.noDatePct}% after inspection</dd><dt>Your approval limit</dt><dd>${r.maxPct[acc.role]}%</dd></dl>
       <p class="note" style="margin-top:8px">Percentages are prototype values, set per supermarket. They don't decide food safety or legal sale eligibility.</p></div>
+    <button class="list-btn" id="staffPrivacy">${I.shield}Privacy &amp; Data<span class="chev">${I.chev}</span></button>
     <button class="list-btn" id="notifs">${I.bell}Notification history<span class="chev">${I.chev}</span></button>
     <button class="list-btn" id="out" style="color:var(--hold);border:0">${I.out}Log Out</button>`, (sh, close) => {
       $("#out", sh).onclick = () => { close(); logout(); };
+      $("#staffPrivacy", sh).onclick = () => { close(); setTimeout(openPrivacy, 260); };
       $("#notifs", sh).onclick = () => { close(); go("notifs"); };
     });
 }

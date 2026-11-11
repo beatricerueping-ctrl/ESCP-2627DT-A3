@@ -75,6 +75,13 @@ p{margin:0}
 .btn svg{width:22px;height:22px;flex:none}
 .discount-ticket{display:grid;gap:10px;margin-top:16px;padding:18px;background:var(--pastel);border:1px dashed var(--emerald);border-radius:16px}
 .discount-code{font-size:38px;letter-spacing:.18em;color:var(--forest);line-height:1.2;user-select:all}
+.privacy-sections{display:grid;gap:12px}
+.privacy-sections summary{font-weight:800;color:var(--forest);cursor:pointer;padding:6px 0}
+.privacy-sections details[open]>:not(summary){margin-top:12px}
+.privacy-sections h3{font-size:16px}
+.privacy-sections .btn{width:100%;font-size:14px;padding:10px 14px;min-height:44px}
+.privacy-option{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--muted)}
+.privacy-option input{margin-top:4px;flex:none}
 .btn-primary{background:var(--emerald);color:var(--white);box-shadow:0 8px 20px rgba(0,143,101,.28)}
 .btn-primary:hover{background:#007f59}
 .btn-outline{background:rgba(215,244,223,.55);color:var(--forest);border-color:var(--emerald)}
