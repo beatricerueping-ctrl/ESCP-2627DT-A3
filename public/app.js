@@ -30,6 +30,7 @@ const ACCOUNTS = [
 const STAFF = r => r === "employee" || r === "manager";
 
 const CATS = ["Fruits","Vegetables","Dairy","Meat","Bakery"];
+const categoryLabel = category => category === "Bakery" ? "Baked Goods" : category;
 const DEFAULT_RULES = {
   table:[{min:14,pct:2},{min:10,pct:5},{min:7,pct:10},{min:4,pct:20},{min:2,pct:30},{min:1,pct:40}],
   reviewWindow:7,           // days before the recorded date when a discount review notification fires
@@ -405,7 +406,7 @@ VIEWS.cdash = el => {
   function paint(){
     const c = customerDoc();
     $("#hello", el).textContent = `Hello, ${firstName(c.name || acc.name)}!`;
-    $("#chips", el).innerHTML = CATS.map(k => `<button class="chip ${c.prefs.includes(k) ? "on" : ""}" data-cat="${k}" aria-pressed="${c.prefs.includes(k)}">${k}</button>`).join("");
+    $("#chips", el).innerHTML = CATS.map(k => `<button class="chip ${c.prefs.includes(k) ? "on" : ""}" data-cat="${k}" aria-pressed="${c.prefs.includes(k)}">${categoryLabel(k)}</button>`).join("");
     $$("#chips .chip", el).forEach(b => b.onclick = () => togglePref(b.dataset.cat));
   }
   paint();
@@ -469,7 +470,7 @@ function openPrefs(){
     <p class="sub" style="margin:6px 0 14px">We show matching products first on every supermarket page.</p>
     <div class="stack" id="pl" style="gap:8px"></div>
     <button class="btn btn-primary" id="ps" style="width:100%;margin-top:16px">Save preferences</button>`, (sh, close) => {
-      const paint = () => { $("#pl", sh).innerHTML = CATS.map(k => `<button class="opt ${sel.has(k) ? "on" : ""}" data-k="${k}" aria-pressed="${sel.has(k)}"><span class="grow"><b>${k}</b><br><small class="note">${desc[k]}</small></span></button>`).join(""); $$("#pl .opt", sh).forEach(b => b.onclick = () => { sel.has(b.dataset.k) ? sel.delete(b.dataset.k) : sel.add(b.dataset.k); paint(); }); };
+      const paint = () => { $("#pl", sh).innerHTML = CATS.map(k => `<button class="opt ${sel.has(k) ? "on" : ""}" data-k="${k}" aria-pressed="${sel.has(k)}"><span class="grow"><b>${categoryLabel(k)}</b><br><small class="note">${desc[k]}</small></span></button>`).join(""); $$("#pl .opt", sh).forEach(b => b.onclick = () => { sel.has(b.dataset.k) ? sel.delete(b.dataset.k) : sel.add(b.dataset.k); paint(); }); };
       paint();
       $("#ps", sh).onclick = async () => { await saveCustomer({prefs: [...sel]}); close(); toast("Preferences saved"); };
     });
